@@ -1,0 +1,15 @@
+node_modules
+dist
+data
+*.db
+*.sqlite
+.git
+.github
+.trae
+.vscode
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+.env.local
+.env.*.local
