@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login.js';
+import StatsPanel from './pages/StatsPanel.js';
 import TicketList from './pages/TicketList.js';
 import TicketDetail from './pages/TicketDetail.js';
 import ArbitrationCenter from './pages/ArbitrationCenter.js';
@@ -22,6 +23,17 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/stats"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <StatsPanel />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/tickets"
@@ -67,7 +79,7 @@ function App() {
           }
         />
 
-        <Route path="/" element={<Navigate to="/tickets" replace />} />
+        <Route path="/" element={<Navigate to="/stats" replace />} />
 
         <Route
           path="*"

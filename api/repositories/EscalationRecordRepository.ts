@@ -49,6 +49,12 @@ export class EscalationRecordRepository {
     return dateStr.replace(' ', 'T') + 'Z';
   };
 
+  countAll(): number {
+    const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM escalation_records`);
+    const row = stmt.get() as any;
+    return row?.count || 0;
+  }
+
   private mapRow = (row: any): EscalationRecord => {
     return {
       id: row.id,

@@ -12,6 +12,8 @@ import {
   ArbitrateRequest,
   ArbitrationDecision,
   EscalationRecord,
+  TicketStats,
+  StatsOverview,
 } from '../../shared/types.js';
 
 function formatSqliteDate(date: Date): string {
@@ -245,5 +247,37 @@ export class TicketService {
       throw new Error('升级阈值必须在0-100之间');
     }
     this.slaConfigRepo.update(durationMinutes, escalationThresholdPercent, autoEscalate);
+  }
+
+  getStatsOverview(): StatsOverview {
+    const statusCounts = this.ticketRepo.countByStatus();
+    const overdueCount = this.ticketRepo.countOverdue();
+    const totalPauseCount = this.pauseReasonRepo.countAll();
+    const totalEscalationCount = this.escalationRepo.countAll();
+    const avgResolutionMinutes = this.ticketRepo.getAvgResolutionMinutes();
+    const slaComplianceRate = this.ticketRepo.getSlaComplianceRate();
+
+    const stats: TicketStats = {
+      total: Object.values(statusCounts).reduce((sum, count) => sum + count, 0),
+      open: statusCounts['open'] || 0,
+      processing: statusCounts['processing'] || 0,
+      paused: statusCounts['paused'] || 0,
+      escalated: statusCounts['escalated'] || 0,
+      arbitrated: statusCounts['arbitrated'] || 0,
+      closed: statusCounts['closed'] || 0,
+      overdue: overdueCount,
+      totalPauseCount,
+      totalEscalationCount,
+      avgResolutionMinutes,
+      slaComplianceRate,
+    };
+
+    return {
+      stats,
+      recentTickets: this.ticketRepo.findRecent(5),
+      escalatedTickets: this.getEscalatedTickets(),
+      pausedTickets: this.ticketRepo.findPaused(),
+      overdueTickets: this.ticketRepo.findOverdueTickets(),
+    };
   }
 }

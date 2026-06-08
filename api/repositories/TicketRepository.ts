@@ -130,6 +130,82 @@ export class TicketRepository {
     stmt.run(additionalMinutes, id);
   }
 
+  countByStatus(): Record<string, number> {
+    const stmt = this.db.prepare(`
+      SELECT status, COUNT(*) as count FROM tickets GROUP BY status
+    `);
+    const rows = stmt.all() as any[];
+    const result: Record<string, number> = {};
+    for (const row of rows) {
+      result[row.status] = row.count;
+    }
+    return result;
+  }
+
+  countOverdue(): number {
+    const stmt = this.db.prepare(`
+      SELECT COUNT(*) as count FROM tickets
+      WHERE status NOT IN ('closed', 'paused', 'escalated', 'arbitrated')
+        AND sla_deadline < datetime('now')
+    `);
+    const row = stmt.get() as any;
+    return row?.count || 0;
+  }
+
+  findPaused(): Ticket[] {
+    return this.findAll('paused');
+  }
+
+  findRecent(limit: number = 5): Ticket[] {
+    const stmt = this.db.prepare(`
+      SELECT id, title, description, customer_name, customer_email, status,
+             created_at, updated_at, sla_deadline, sla_paused_at,
+             sla_remaining_ms, current_handler_id, sla_duration_minutes, escalation_level
+      FROM tickets
+      ORDER BY created_at DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(limit) as any[];
+    return rows.map(this.mapRowToTicket);
+  }
+
+  findOverdueTickets(): Ticket[] {
+    const stmt = this.db.prepare(`
+      SELECT id, title, description, customer_name, customer_email, status,
+             created_at, updated_at, sla_deadline, sla_paused_at,
+             sla_remaining_ms, current_handler_id, sla_duration_minutes, escalation_level
+      FROM tickets
+      WHERE status NOT IN ('closed', 'paused')
+        AND sla_deadline < datetime('now')
+      ORDER BY sla_deadline ASC
+    `);
+    const rows = stmt.all() as any[];
+    return rows.map(this.mapRowToTicket);
+  }
+
+  getAvgResolutionMinutes(): number {
+    const stmt = this.db.prepare(`
+      SELECT AVG(
+        CAST((julianday(updated_at) - julianday(created_at)) * 24 * 60 AS INTEGER)
+      ) as avg_minutes
+      FROM tickets WHERE status = 'closed'
+    `);
+    const row = stmt.get() as any;
+    return row?.avg_minutes || 0;
+  }
+
+  getSlaComplianceRate(): number {
+    const stmt = this.db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN updated_at <= sla_deadline THEN 1 ELSE 0 END) as compliant
+      FROM tickets WHERE status = 'closed'
+    `);
+    const row = stmt.get() as any;
+    if (!row || row.total === 0) return 100;
+    return Math.round((row.compliant / row.total) * 100);
+  }
+
   private sqliteToIso = (dateStr: string | null): string | null => {
     if (!dateStr) return null;
     return dateStr.replace(' ', 'T') + 'Z';

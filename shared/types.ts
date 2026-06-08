@@ -114,3 +114,26 @@ export interface ApiError {
   error: string;
   details?: string;
 }
+
+export interface TicketStats {
+  total: number;
+  open: number;
+  processing: number;
+  paused: number;
+  escalated: number;
+  arbitrated: number;
+  closed: number;
+  overdue: number;
+  totalPauseCount: number;
+  totalEscalationCount: number;
+  avgResolutionMinutes: number;
+  slaComplianceRate: number;
+}
+
+export interface StatsOverview {
+  stats: TicketStats;
+  recentTickets: Ticket[];
+  escalatedTickets: Ticket[];
+  pausedTickets: Ticket[];
+  overdueTickets: Ticket[];
+}

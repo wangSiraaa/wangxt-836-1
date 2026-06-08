@@ -9,6 +9,7 @@ import {
   Settings,
   AlertTriangle,
   Clock,
+  BarChart3,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -25,6 +26,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const navItems = [
+    { path: '/stats', label: '统计面板', icon: BarChart3, roles: ['agent', 'supervisor', 'arbitrator', 'admin'] },
     { path: '/tickets', label: '工单列表', icon: Ticket, roles: ['agent', 'supervisor', 'arbitrator', 'admin'] },
     { path: '/escalated', label: '升级仲裁', icon: Gavel, roles: ['supervisor', 'arbitrator', 'admin'] },
     { path: '/users', label: '权限管理', icon: Users, roles: ['admin'] },

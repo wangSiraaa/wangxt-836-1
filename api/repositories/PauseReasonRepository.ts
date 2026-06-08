@@ -59,6 +59,12 @@ export class PauseReasonRepository {
     return row ? this.mapRow(row) : null;
   }
 
+  countAll(): number {
+    const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM pause_reasons`);
+    const row = stmt.get() as any;
+    return row?.count || 0;
+  }
+
   private sqliteToIso = (dateStr: string | null): string | null => {
     if (!dateStr) return null;
     return dateStr.replace(' ', 'T') + 'Z';

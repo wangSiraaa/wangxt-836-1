@@ -110,6 +110,12 @@ app.put(
   (req: Request, res: Response) => ticketController.updateSlaConfig(req, res)
 );
 
+app.get(
+  '/api/stats/overview',
+  authMiddleware(authService),
+  (req: Request, res: Response) => ticketController.getStatsOverview(req, res)
+);
+
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Server error:', error);
   res.status(500).json({

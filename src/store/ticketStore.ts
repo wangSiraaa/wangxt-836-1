@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ticketAPI } from '../lib/api.js';
+import { ticketAPI, statsAPI } from '../lib/api.js';
 import type {
   Ticket,
   PauseReason,
@@ -9,6 +9,7 @@ import type {
   PauseTicketRequest,
   ArbitrateRequest,
   CreateTicketRequest,
+  StatsOverview,
 } from '../../shared/types.js';
 
 interface TicketState {
@@ -18,6 +19,8 @@ interface TicketState {
   pauseReasons: PauseReason[];
   escalations: EscalationRecord[];
   arbitration: ArbitrationResult | null;
+  statsOverview: StatsOverview | null;
+  statsLoading: boolean;
   loading: boolean;
   error: string | null;
   fetchTickets: (status?: TicketStatus) => Promise<void>;
@@ -26,6 +29,7 @@ interface TicketState {
   fetchPauseReasons: (id: string) => Promise<void>;
   fetchEscalations: (id: string) => Promise<void>;
   fetchArbitration: (id: string) => Promise<void>;
+  fetchStatsOverview: () => Promise<void>;
   createTicket: (data: CreateTicketRequest) => Promise<Ticket>;
   processTicket: (id: string) => Promise<void>;
   pauseTicket: (id: string, data: PauseTicketRequest) => Promise<void>;
@@ -35,6 +39,7 @@ interface TicketState {
   closeTicket: (id: string) => Promise<void>;
   clearError: () => void;
   clearCurrent: () => void;
+  clearStats: () => void;
 }
 
 export const useTicketStore = create<TicketState>((set, get) => ({
@@ -44,6 +49,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
   pauseReasons: [],
   escalations: [],
   arbitration: null,
+  statsOverview: null,
+  statsLoading: false,
   loading: false,
   error: null,
 
@@ -267,4 +274,18 @@ export const useTicketStore = create<TicketState>((set, get) => ({
       escalations: [],
       arbitration: null,
     }),
+
+  fetchStatsOverview: async () => {
+    set({ statsLoading: true, error: null });
+    try {
+      const overview = await statsAPI.getOverview();
+      set({ statsOverview: overview, statsLoading: false });
+    } catch (e: any) {
+      const errorMessage = e.response?.data?.error || '获取统计数据失败';
+      set({ error: errorMessage, statsLoading: false });
+      throw new Error(errorMessage);
+    }
+  },
+
+  clearStats: () => set({ statsOverview: null }),
 }));

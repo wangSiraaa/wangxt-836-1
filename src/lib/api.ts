@@ -12,6 +12,7 @@ import type {
   ArbitrateRequest,
   CreateTicketRequest,
   TicketStatus,
+  StatsOverview,
 } from '../../shared/types.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
@@ -90,6 +91,11 @@ export const slaAPI = {
     escalationThresholdPercent: number;
     autoEscalate: boolean;
   }): Promise<void> => api.put('/sla-config', data).then((res) => res.data),
+};
+
+export const statsAPI = {
+  getOverview: (): Promise<StatsOverview> =>
+    api.get('/stats/overview').then((res) => res.data),
 };
 
 export const healthAPI = {
