@@ -33,10 +33,10 @@
 ### 方式一：Docker 容器启动（推荐）
 
 ```bash
-# 1. 启动服务
-docker-compose up -d
+# 1. 构建并启动服务
+docker-compose up -d --build
 
-# 2. 查看服务状态
+# 2. 查看服务状态和健康检查
 docker-compose ps
 
 # 3. 查看日志
@@ -48,9 +48,27 @@ docker-compose down
 
 启动后访问：
 - 前端应用: http://localhost:3000
-- 后端 API: http://localhost:3001
+- 后端 API: http://localhost:3000/api
+- 健康检查: http://localhost:3000/api/health
 
-### 方式二：本地开发启动
+### 方式二：本地生产构建启动
+
+```bash
+# 1. 安装依赖
+pnpm install
+
+# 2. 重新构建原生模块（bcrypt, better-sqlite3）
+pnpm rebuild bcrypt better-sqlite3
+
+# 3. 构建前端（dist/client）和后端（dist/api）
+pnpm build
+pnpm build:api
+
+# 4. 启动生产服务
+pnpm start:prod
+```
+
+### 方式三：本地开发启动
 
 ```bash
 # 1. 安装依赖
@@ -114,9 +132,18 @@ GET /api/health
   "timestamp": "2024-01-15T10:30:00.000Z",
   "database": "connected",
   "slaWorker": "running",
+  "lastWorkerRun": "2024-01-15T10:30:00.000Z",
   "version": "1.0.0"
 }
 ```
+
+### 状态说明
+| 字段 | 说明 | 可能值 |
+|------|------|--------|
+| `status` | 整体健康状态 | `ok` - 全部正常, `degraded` - 部分异常 |
+| `database` | 数据库连接状态 | `connected` - 正常, `disconnected` - 未连接, `error` - 连接错误 |
+| `slaWorker` | SLA 定时任务状态 | `running` - 运行中, `stopped` - 已停止, `error` - 错误 |
+| `lastWorkerRun` | SLA Worker 最后执行时间 | ISO 时间字符串或 null |
 
 ### Docker 健康检查配置
 在 `docker-compose.yml` 中已配置：
@@ -150,13 +177,13 @@ healthcheck:
 
 使用 curl 直接调用后端 API，验证后端也会拦截：
 ```bash
-# 1. 登录获取 token
-TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
+# 1. 登录获取 token (Docker 环境使用 3000 端口，本地开发使用 3001 端口
+TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"agent1","password":"123456"}' | jq -r '.token')
 
 # 2. 尝试不填原因暂停工单（应该失败）
-curl -s -X POST http://localhost:3001/api/tickets/t1/pause \
+curl -s -X POST http://localhost:3000/api/tickets/t1/pause \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"reason":"","pausedBy":"u1"}'
@@ -164,7 +191,7 @@ curl -s -X POST http://localhost:3001/api/tickets/t1/pause \
 # 预期响应: {"error":"暂停原因不能为空"}
 
 # 3. 尝试原因过短（应该失败）
-curl -s -X POST http://localhost:3001/api/tickets/t1/pause \
+curl -s -X POST http://localhost:3000/api/tickets/t1/pause \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"reason":"测","pausedBy":"u1"}'
@@ -172,7 +199,7 @@ curl -s -X POST http://localhost:3001/api/tickets/t1/pause \
 # 预期响应: {"error":"暂停原因至少5个字符"}
 
 # 4. 正常填写原因（应该成功）
-curl -s -X POST http://localhost:3001/api/tickets/t1/pause \
+curl -s -X POST http://localhost:3000/api/tickets/t1/pause \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"reason":"客户需要补充材料，暂停处理","pausedBy":"u1"}'
@@ -206,13 +233,13 @@ curl -s -X POST http://localhost:3001/api/tickets/t1/pause \
 
 ```bash
 # 1. 查看 t3 工单当前状态
-curl -s http://localhost:3001/api/tickets/t3 \
+curl -s http://localhost:3000/api/tickets/t3 \
   -H "Authorization: Bearer $TOKEN" | jq '.status, .escalationLevel'
 
 # 预期: "escalated", 1
 
 # 2. 查看升级记录
-curl -s http://localhost:3001/api/tickets/t3 \
+curl -s http://localhost:3000/api/tickets/t3 \
   -H "Authorization: Bearer $TOKEN" | jq '.escalationRecords[0]'
 
 # 预期:

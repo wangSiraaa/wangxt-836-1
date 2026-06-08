@@ -24,6 +24,10 @@ export default defineConfig({
     }), 
     tsconfigPaths(),
   ],
+  build: {
+    outDir: 'dist/client',
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       '/api': {

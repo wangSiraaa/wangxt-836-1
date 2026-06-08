@@ -1,6 +1,6 @@
 import http from 'http';
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
 function makeRequest(method, path, data = null, token = null) {
   return new Promise((resolve, reject) => {

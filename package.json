@@ -6,6 +6,10 @@
   "scripts": {
     "client:dev": "vite",
     "build": "tsc -b && vite build",
+    "build:api": "tsc -p tsconfig.api.json",
+    "build:all": "pnpm build:api && pnpm build",
+    "start": "node dist/api/server.js",
+    "start:prod": "NODE_ENV=production node dist/api/server.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "check": "tsc --noEmit",

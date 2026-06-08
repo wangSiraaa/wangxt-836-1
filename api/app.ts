@@ -30,6 +30,13 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  const clientDistPath = path.resolve(__dirname, '..', 'client');
+  app.use(express.static(clientDistPath));
+}
+
 const db = getDb();
 const authService = new AuthService(db);
 const ticketService = new TicketService(db);
@@ -46,11 +53,28 @@ app.locals.ticketController = ticketController;
 app.locals.slaWorker = slaWorker;
 
 app.get('/api/health', (req: Request, res: Response): void => {
+  let dbStatus = 'disconnected';
+  let slaStatus = 'stopped';
+  
+  try {
+    db.prepare('SELECT 1').get();
+    dbStatus = 'connected';
+  } catch (e) {
+    dbStatus = 'error';
+  }
+  
+  try {
+    slaStatus = slaWorker.isRunning() ? 'running' : 'stopped';
+  } catch (e) {
+    slaStatus = 'error';
+  }
+  
   res.status(200).json({
-    status: 'ok',
+    status: dbStatus === 'connected' && slaStatus === 'running' ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
-    database: 'connected',
-    slaWorker: slaWorker.isRunning() ? 'running' : 'stopped',
+    database: dbStatus,
+    slaWorker: slaStatus,
+    lastWorkerRun: slaWorker.getLastRunTime()?.toISOString() || null,
     version: '1.0.0',
   });
 });
@@ -94,11 +118,25 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    error: 'API not found',
+if (isProduction) {
+  app.get('*', (req: Request, res: Response) => {
+    if (!req.path.startsWith('/api/')) {
+      const indexPath = path.resolve(__dirname, '..', 'client', 'index.html');
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'API not found',
+      });
+    }
   });
-});
+} else {
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      error: 'API not found',
+    });
+  });
+}
 
 export default app;
